@@ -1,10 +1,13 @@
 import WebSocket from 'ws';
+import url from 'url'
 
 class Room {
   name: string;
-  clients: Set<WebSocket>;
+  clients: Set<WebSocket> = new Set();
 
-  constructor(){}
+  constructor(name: string){
+    this.name = name
+  }
 
   broadcast(message: string){
     this.clients.forEach((client: WebSocket) => {
@@ -18,7 +21,7 @@ class Room {
 const rooms: Record<string, Room> = {};
 
 function createRoom(name: string): Room {
-  const room: Room = new Room()
+  const room: Room = new Room(name)
   rooms[name] = room;
   console.log(`Created room "${name}"`);
   return room;
@@ -26,7 +29,8 @@ function createRoom(name: string): Room {
 
 function handleConnection(ws: WebSocket, req) {
   console.log(req)
-  const roomName = req.url.split('?')[1];
+  const roomName =  url.parse(req.url, true).query.roomName as string
+  console.log(roomName)
   if (!roomName) {
     console.log('Missing room parameter');
     ws.close();
