@@ -28,9 +28,9 @@ function createRoom(name: string): Room {
 }
 
 function handleConnection(ws: WebSocket, req) {
-  console.log(req)
+
   const roomName =  url.parse(req.url, true).query.roomName as string
-  console.log(roomName)
+
   if (!roomName) {
     console.log('Missing room parameter');
     ws.close();
@@ -45,9 +45,9 @@ function handleConnection(ws: WebSocket, req) {
   console.log(`Client joined room "${roomName}"`);
   room.clients.add(ws);
 
-  ws.on('message', (message: string) => {
-    console.log(`Received message from client in room "${roomName}":`, message);
-    room.broadcast(message);
+  ws.on('message', (message) => {
+    console.log(`Received message from client in room "${roomName}":`, message.toString());
+    room.broadcast(message.toString());
   });
 
   ws.on('close', () => {
