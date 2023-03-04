@@ -1,20 +1,52 @@
 import WebSocket from 'ws';
 import url from 'url'
+import { v4 as uuidv4 } from 'uuid'
+
+interface Message{
+  id: string
+  type: 'Create' | 'Update' | 'Delete'
+  componentName: string
+  inputs?: any
+}
 
 class Room {
   name: string;
   clients: Set<WebSocket> = new Set();
-
+  messages: Array<Message> = []
   constructor(name: string){
     this.name = name
   }
 
-  broadcast(message: string){
+  broadcast(message: Message){
     this.clients.forEach((client: WebSocket) => {
       if (client.readyState === WebSocket.OPEN) {
-        client.send(message);
+        
+        switch(message.type){
+
+          case 'Create': {
+            message.id = uuidv4()
+            console.log(message.id)
+            this.messages.push(message)
+            break;
+          }
+
+          case 'Update': {
+            const index = this.messages.findIndex( msg => msg.id === message.id)
+            this.messages[index] = {...this.messages[index], inputs: message.inputs}
+            break;
+          }
+
+        }
+
+        client.send(JSON.stringify(message))
       }
     });
+  }
+
+  replayMessages(client: WebSocket){
+    this.messages.forEach((msg) => {
+      client.send(JSON.stringify(msg))
+    })
   }
 }
 
@@ -23,7 +55,6 @@ const rooms: Record<string, Room> = {};
 function createRoom(name: string): Room {
   const room: Room = new Room(name)
   rooms[name] = room;
-  console.log(`Created room "${name}"`);
   return room;
 }
 
@@ -32,7 +63,6 @@ function handleConnection(ws: WebSocket, req) {
   const roomName =  url.parse(req.url, true).query.roomName as string
 
   if (!roomName) {
-    console.log('Missing room parameter');
     ws.close();
     return;
   }
@@ -42,20 +72,18 @@ function handleConnection(ws: WebSocket, req) {
     room = createRoom(roomName);
   }
 
-  console.log(`Client joined room "${roomName}"`);
   room.clients.add(ws);
 
+  room.replayMessages(ws)
+
   ws.on('message', (message) => {
-    console.log(`Received message from client in room "${roomName}":`, message.toString());
-    room.broadcast(message.toString());
+    room.broadcast(JSON.parse(message.toString()));
   });
 
   ws.on('close', () => {
-    console.log(`Client left room "${roomName}"`);
     room.clients.delete(ws);
     if (room.clients.size === 0) {
       delete rooms[roomName];
-      console.log(`Deleted room "${roomName}"`);
     }
   });
 }
