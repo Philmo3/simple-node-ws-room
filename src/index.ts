@@ -19,30 +19,33 @@ class Room {
   }
 
   broadcast(message: Message){
+
+    if(message.type === 'Create'){
+      message.id = uuidv4()
+    }
+
+    switch(message.type){
+
+      case 'Create': {
+        this.messages.push(message)
+        break;
+      }
+
+      case 'Update': {
+        const index = this.messages.findIndex( msg => msg.id === message.id)
+        this.messages[index] = {...this.messages[index], inputs: message.inputs}
+        break;
+      }
+
+      case 'Position' : {
+        const index = this.messages.findIndex( msg => msg.id === message.id)
+        this.messages[index] = {...this.messages[index], position: {x: message.position.x, y: message.position.y}}
+        break;
+      }
+    }
+
     this.clients.forEach((client: WebSocket) => {
       if (client.readyState === WebSocket.OPEN) {
-        
-        switch(message.type){
-
-          case 'Create': {
-            message.id = uuidv4()
-            this.messages.push(message)
-            break;
-          }
-
-          case 'Update': {
-            const index = this.messages.findIndex( msg => msg.id === message.id)
-            this.messages[index] = {...this.messages[index], inputs: message.inputs}
-            break;
-          }
-
-          case 'Position' : {
-            const index = this.messages.findIndex( msg => msg.id === message.id)
-            this.messages[index] = {...this.messages[index], position: {x: message.position.x, y: message.position.y}}
-            break;
-          }
-        }
-        console.log(this.messages)
         client.send(JSON.stringify(message))
       }
     });
@@ -50,7 +53,6 @@ class Room {
 
   replayMessages(client: WebSocket){
     this.messages.forEach((msg) => {
-      console.log(msg)
       client.send(JSON.stringify(msg))
     })
   }
