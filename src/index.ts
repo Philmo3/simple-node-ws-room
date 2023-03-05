@@ -4,9 +4,10 @@ import { v4 as uuidv4 } from 'uuid'
 
 interface Message{
   id: string
-  type: 'Create' | 'Update' | 'Delete'
+  type: 'Create' | 'Update' | 'Delete' | 'Position'
   componentName: string
   inputs?: any
+  position?: {x: number, y: number}
 }
 
 class Room {
@@ -25,7 +26,6 @@ class Room {
 
           case 'Create': {
             message.id = uuidv4()
-            console.log(message.id)
             this.messages.push(message)
             break;
           }
@@ -36,8 +36,13 @@ class Room {
             break;
           }
 
+          case 'Position' : {
+            const index = this.messages.findIndex( msg => msg.id === message.id)
+            this.messages[index] = {...this.messages[index], position: {x: message.position.x, y: message.position.y}}
+            break;
+          }
         }
-
+        console.log(this.messages)
         client.send(JSON.stringify(message))
       }
     });
@@ -45,6 +50,7 @@ class Room {
 
   replayMessages(client: WebSocket){
     this.messages.forEach((msg) => {
+      console.log(msg)
       client.send(JSON.stringify(msg))
     })
   }
